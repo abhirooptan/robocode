@@ -1,0 +1,76 @@
+package RadarRobots;
+import robocode.HitWallEvent;
+import robocode.ScannedRobotEvent;
+import robocode.AdvancedRobot;
+import static robocode.util.Utils.normalRelativeAngleDegrees;
+
+public class robo1 extends AdvancedRobot 
+{
+	double previousEnergy = 100;
+	  int movementDirection = 1;
+	  int gunDirection = 1;
+	  boolean movingForward;
+	  public void run() {
+	    setTurnGunRight(99999);
+	  }
+	 
+	public void onScannedRobot(ScannedRobotEvent e) 
+	{
+		 // Stay at right angles to the opponent
+	      setTurnRight(e.getBearing()+90-
+	         30*movementDirection);
+	  	double absoluteBearing = getHeading() + e.getBearing();
+		double bearingFromGun = normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
+	     // If the bot has small energy drop,
+	    // assume it fired
+	    double changeInEnergy =
+	      previousEnergy-e.getEnergy();
+	    if (changeInEnergy>0 &&
+	        changeInEnergy<=3) {
+	         // Dodge!
+	         movementDirection =
+	          -movementDirection;
+	         setAhead((e.getDistance()/4+25)+movementDirection);
+	     }
+	    // When a bot is spotted,
+	    // sweep the gun and radar
+	    gunDirection = -gunDirection;
+	    setTurnGunRight(99999*gunDirection);
+	    
+	    // Fire directly at target
+	    fire(Math.min(3 - Math.abs(bearingFromGun), getEnergy() - .1)) ;
+	    
+	    // Track the energy level
+	    previousEnergy = e.getEnergy();
+	}
+	
+	public void smartFire(double robotDistance) 
+	{
+		if (robotDistance > 200 || getEnergy() < 15) 
+			fire(1);
+			
+		else if (robotDistance > 50) 
+			fire(2); 
+		
+		else 
+			fire(3);
+	}
+	
+	public void onHitWall(HitWallEvent e) {
+		// Bounce off!
+		reverseDirection();
+	}
+
+	/**
+	 * reverseDirection:  Switch from ahead to back & vice versa
+	 */
+	public void reverseDirection() {
+		if (movingForward) {
+			setBack(40000);
+			movingForward = false;
+		} else {
+			setAhead(40000);
+			movingForward = true;
+		}
+	}
+}
