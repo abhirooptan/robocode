@@ -1,0 +1,23 @@
+public void wallCollisionCheck()
+	{
+		double x = getX();
+		double y = getY();
+		boolean canIMove;
+		if((x + 10) < getBattleFieldWidth() && (x - 10) > 0 && (y + 10) < getBattleFieldHeight() && (y - 10) > 0 )//cheking if all the poitions are free or not
+			canIMove = true;
+		else // not allowing to move
+			canIMove = false;
+		
+		if(canImove == false)
+			reverseDirection();
+	}
+	
+	public void reverseDirection() {
+		if (movingForward) {
+			setBack(40000);
+			movingForward = false;
+		} else {
+			setAhead(40000);
+			movingForward = true;
+		}
+	}
