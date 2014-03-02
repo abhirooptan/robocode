@@ -1,0 +1,186 @@
+package RadarRobots;
+import robocode.HitWallEvent;
+import robocode.ScannedRobotEvent;
+import robocode.AdvancedRobot;
+import static robocode.util.Utils.normalRelativeAngleDegrees;
+
+import java.util.HashMap;
+//import java.utils.ArrayList;
+//import java.util.Iterator;
+import java.util.Map.Entry;
+
+public class Robo2 extends AdvancedRobot 
+{
+	final int DANGER_MAP_RESOLUTION=6;
+	double battlePerBlockX=getBattleFieldWidth()/DANGER_MAP_RESOLUTION;
+	double battlePerBlockY=getBattleFieldHeight()/DANGER_MAP_RESOLUTION;
+	double[][] dangerMap = new double[DANGER_MAP_RESOLUTION][DANGER_MAP_RESOLUTION];
+	boolean scanAllFirst=true;
+//	ArrayList<ScannedRobotEvent> bots = new ArrayList<ScannedRobotEvent>();
+	HashMap<String,ScannedRobotEvent> bots = new HashMap<String,ScannedRobotEvent>();
+	//want keep the timestamp when the check was done so I could recheck it again after the timeout, but don't know the time or how to get it :(
+	// ScannedRobotEvent.getTime() has the battletime, but that gives me timestamp of that even and I want current time
+	Long timeStamp;
+    Long timeStampTimeout=100L;
+	int safeX;
+	int safeY;
+	// the timesamp will hold when the safe_x and safe_y was calculated;
+	
+	double previousEnergy = 100;
+	  int movementDirection = 1;
+	  int gunDirection = 1;
+	  boolean movingForward;
+	  public void run() {
+	    setTurnGunRight(360);
+	  }
+	 
+	private void blurMap() {
+		double[][] newMap = new double[DANGER_MAP_RESOLUTION][DANGER_MAP_RESOLUTION];
+		for (int i=0;i<DANGER_MAP_RESOLUTION;i++) {
+			for (int y=0;y<DANGER_MAP_RESOLUTION;y++)
+			for (int x=0;x<DANGER_MAP_RESOLUTION;x++) {
+				double danger=0;
+				int samples=0;
+				
+				danger+=this.dangerMap[x][y];
+				samples++;
+				if (x>0) {
+					danger+=this.dangerMap[x-1][y];
+       				samples++;
+				
+					if (y>0) {
+						danger+=this.dangerMap[x-1][y-1];
+        				samples++;
+					}
+					if (y<(DANGER_MAP_RESOLUTION-1)) {
+						danger+=this.dangerMap[x-1][y+1];
+        				samples++;
+					}
+				}
+				if (x<(DANGER_MAP_RESOLUTION-1)) {
+					danger+=this.dangerMap[x+1][y];
+       				samples++;
+				
+					if (y>0) {
+						danger+=this.dangerMap[x+1][y-1];
+        				samples++;
+					}
+					if (y<(DANGER_MAP_RESOLUTION-1)) {
+						danger+=this.dangerMap[x+1][y+1];
+        				samples++;
+					}
+				}
+				if (y>0) {
+					danger+=this.dangerMap[x][y-1];
+       				samples++;
+				}
+				if (y<(DANGER_MAP_RESOLUTION-1)) {
+					danger+=this.dangerMap[x][y+1];
+       				samples++;
+				}
+				newMap[x][y]=danger/(double)(samples);
+			}
+		}
+		this.dangerMap=newMap;
+	}
+	
+    private void getSafeXY() {
+		double minDamage=1;
+		int sX=0,sY=0;
+		for (int y=0;y<DANGER_MAP_RESOLUTION;y++)
+		for (int x=0;x<DANGER_MAP_RESOLUTION;x++) {		
+			if (this.dangerMap[x][y]<minDamage) {
+				minDamage=this.dangerMap[x][y];
+				sX=x;
+				sY=y;
+			}
+		}
+		this.safeX=sX;
+		this.safeY=sY;
+	}
+	
+	public void onScannedRobot(ScannedRobotEvent e) 
+	{
+		//I want add all new scannedRobots into the bots, but stop after second revolution
+		//not sure how to detect it.
+		// was thinking if I will see robot which is already in the array, but what to use to uniquely identify it
+		// name? and when there are 2 instances of the same robot.
+		// and what about when some robots will move and I will stop scanning and still miss some
+		
+		if (bots.get(e.getName())==null) {
+			bots.put(e.getName(),e);
+		} else {
+			//found same bot twice, asume we are done,but it's not true
+			scanAllFirst=false;
+			timeStamp=e.getTime();
+			for (int y=0;y<DANGER_MAP_RESOLUTION;y++)
+			for (int x=0;x<DANGER_MAP_RESOLUTION;x++) {
+				this.dangerMap[x][y]=0;
+			}
+			for (Entry<String,ScannedRobotEvent> bot: bots.entrySet()) {
+					// how to get X & Y of the bot? your absolute X & Y + angle * distance?
+//				this.dangerMap[bot.getX()/battlePerBlockX][bot.getY()/battlePerBlockY]+=1;
+			}
+			blurMap();
+			getSafeXY();
+		}
+	
+		 // Stay at right angles to the opponent
+	      setTurnRight(e.getBearing()+90-
+	         30*movementDirection);
+	  	double absoluteBearing = getHeading() + e.getBearing();
+		double bearingFromGun = normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
+	     // If the bot has small energy drop,
+	    // assume it fired
+	    double changeInEnergy =
+	      previousEnergy-e.getEnergy();
+	    if (changeInEnergy>0 &&
+	        changeInEnergy<=3) {
+	         // Dodge!
+	         movementDirection =
+	          -movementDirection;
+	         setAhead((e.getDistance()/4+25)+movementDirection);
+	     }
+	    // When a bot is spotted,
+	    // sweep the gun and radar
+	    gunDirection = -gunDirection;
+	    setTurnGunRight(99999*gunDirection);
+	    
+	    // Fire directly at target
+	    fire(Math.min(3 - Math.abs(bearingFromGun), getEnergy() - .1)) ;
+	    
+	    // Track the energy level
+	    previousEnergy = e.getEnergy();
+	}
+	
+	public void smartFire(double robotDistance) 
+	{
+		if (robotDistance > 200 || getEnergy() < 15) 
+			fire(1);
+			
+		else if (robotDistance > 50) 
+			fire(2); 
+		
+		else 
+			fire(3);
+	}
+	
+	public void onHitWall(HitWallEvent e) {
+		// Bounce off!
+		reverseDirection();
+	}
+
+	/**
+	 * reverseDirection:  Switch from ahead to back & vice versa
+	 */
+	public void reverseDirection() {
+		if (movingForward) {
+			setBack(40000);
+			movingForward = false;
+		} else {
+			setAhead(40000);
+			movingForward = true;
+		}
+	}
+	// just showing how it will show you changes made by my
+}
