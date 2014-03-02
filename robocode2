@@ -98,8 +98,8 @@ public class Robo2 extends AdvancedRobot
 				sY=y;
 			}
 		}
-		this.safeX=sX;
-		this.safeY=sY;
+		this.safeX=((double)(sX)+0.5)*battlePerBlockX;
+		this.safeY=((double)(sY)+0.5)*battlePerBlockY;
 	}
 	
 	public void onScannedRobot(ScannedRobotEvent e) 
