@@ -12,8 +12,8 @@ import java.util.Map.Entry;
 public class Robo2 extends AdvancedRobot 
 {
 	final int DANGER_MAP_RESOLUTION=6;
-	double battlePerBlockX=getBattleFieldWidth()/DANGER_MAP_RESOLUTION;
-	double battlePerBlockY=getBattleFieldHeight()/DANGER_MAP_RESOLUTION;
+	double battlePerBlockX;
+	double battlePerBlockY;
 	double[][] dangerMap = new double[DANGER_MAP_RESOLUTION][DANGER_MAP_RESOLUTION];
 	boolean scanAllFirst=true;
 //	ArrayList<ScannedRobotEvent> bots = new ArrayList<ScannedRobotEvent>();
@@ -30,7 +30,10 @@ public class Robo2 extends AdvancedRobot
 	  int movementDirection = 1;
 	  int gunDirection = 1;
 	  boolean movingForward;
+
 	  public void run() {
+	    battlePerBlockX=getBattleFieldWidth()/DANGER_MAP_RESOLUTION;
+		battlePerBlockY=getBattleFieldHeight()/DANGER_MAP_RESOLUTION;
 	    setTurnGunRight(360);
 	  }
 	 
@@ -106,7 +109,7 @@ public class Robo2 extends AdvancedRobot
 		// was thinking if I will see robot which is already in the array, but what to use to uniquely identify it
 		// name? and when there are 2 instances of the same robot.
 		// and what about when some robots will move and I will stop scanning and still miss some
-		
+	    if (scanAllFirst) {		
 		if (bots.get(e.getName())==null) {
 			bots.put(e.getName(),e);
 		} else {
@@ -124,33 +127,34 @@ public class Robo2 extends AdvancedRobot
 			blurMap();
 			getSafeXY();
 		}
-	
-		 // Stay at right angles to the opponent
-	      setTurnRight(e.getBearing()+90-
-	         30*movementDirection);
-	  	double absoluteBearing = getHeading() + e.getBearing();
-		double bearingFromGun = normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
-	     // If the bot has small energy drop,
-	    // assume it fired
-	    double changeInEnergy =
-	      previousEnergy-e.getEnergy();
-	    if (changeInEnergy>0 &&
-	        changeInEnergy<=3) {
-	         // Dodge!
-	         movementDirection =
-	          -movementDirection;
-	         setAhead((e.getDistance()/4+25)+movementDirection);
-	     }
-	    // When a bot is spotted,
-	    // sweep the gun and radar
-	    gunDirection = -gunDirection;
-	    setTurnGunRight(99999*gunDirection);
+	     } else {
+			 // Stay at right angles to the opponent
+		      setTurnRight(e.getBearing()+90-
+	    	     30*movementDirection);
+		  	double absoluteBearing = getHeading() + e.getBearing();
+			double bearingFromGun = normalRelativeAngleDegrees(absoluteBearing - getGunHeading());
+	    	 // If the bot has small energy drop,
+		    // assume it fired
+		    double changeInEnergy =
+	    	  previousEnergy-e.getEnergy();
+		    if (changeInEnergy>0 &&
+		        changeInEnergy<=3) {
+	    	     // Dodge!
+	        	 movementDirection =
+		          -movementDirection;
+		         setAhead((e.getDistance()/4+25)+movementDirection);
+	    	 }
+		    // When a bot is spotted,
+		    // sweep the gun and radar
+		    gunDirection = -gunDirection;
+	    	setTurnGunRight(99999*gunDirection);
 	    
-	    // Fire directly at target
-	    fire(Math.min(3 - Math.abs(bearingFromGun), getEnergy() - .1)) ;
+		    // Fire directly at target
+		    fire(Math.min(3 - Math.abs(bearingFromGun), getEnergy() - .1)) ;
 	    
-	    // Track the energy level
-	    previousEnergy = e.getEnergy();
+	    	// Track the energy level
+		    previousEnergy = e.getEnergy();
+		}
 	}
 	
 	public void smartFire(double robotDistance) 
